@@ -1,81 +1,84 @@
 #!/bin/bash
 
-
-askVhostPort(){
-    read -p "Bonjour Veuillez mettre le port du vhost "$'\n'  vhostport
-    if [ -z "$vhostport" ]; then
-        echo "Veuillez mettre une valeur valide"
-        read -p "Bonjour Veuillez mettre le port du vhost "$'\n'  vhostport
-    else
-        echo $'\n'
-    fi
-
+askVhostPort() {
+    while true; do
+        read -p "Bonjour, veuillez mettre le port du vhost : " vhostport
+        if [ -n "$vhostport" ]; then
+            break
+        else
+            echo "❌ Veuillez mettre une valeur valide pour le port."
+        fi
+    done
+    echo
 }
-askServerName(){
-    read -p "Veuillez mettre l url de la redirection ex : staff.ezariel.eu "$'\n'  serverNameRedirect
-    cp "template-vhost.conf" "$serverNameRedirect.conf"
-    if [ -z "$serverNameRedirect" ]; then
-        echo "Veuillez mettre une valeur valide"
-        read -p "Veuillez mettre l url de la redirection ex : staff.ezariel.eu "$'\n'  serverNameRedirect
-        cp "template-vhost.conf" "$serverNameRedirect.conf"
-    else
-        echo $'\n'
-    fi
 
+askServerName() {
+    while true; do
+        read -p "Veuillez mettre l'URL de la redirection (ex : staff.ezariel.eu) : " serverNameRedirect
+        if [ -n "$serverNameRedirect" ]; then
+            cp "template-vhost.conf" "$serverNameRedirect.conf"
+            break
+        else
+            echo "❌ Veuillez mettre une valeur valide pour le nom de domaine."
+        fi
+    done
+    echo
 }
-askServerIp(){
-    read -p "Veuillez mettre l'adresse ip de la machine cible "$'\n'  serverIp
-    if [ -z "$serverIp" ]; then
-        echo "Veuillez mettre une valeur valide"
-        read -p "Veuillez mettre l'adresse ip de la machine cible "$'\n'  serverIp
-    else
-        echo $'\n'
-    fi
 
+askServerIp() {
+    while true; do
+        read -p "Veuillez mettre l'adresse IP de la machine cible : " serverIp
+        if [ -n "$serverIp" ]; then
+            break
+        else
+            echo "❌ Veuillez mettre une valeur valide pour l'adresse IP."
+        fi
+    done
+    echo
 }
-askServerPort(){
-    read -p "Veuillez mettre le port de la machine cible "$'\n'  serverPort
-    if [ -z "$serverPort" ]; then
-        echo "Veuillez mettre une valeur valide"
-        read -p "Veuillez mettre le port la machine cible "$'\n'  serverPort
-    else
-        echo $'\n'
-    fi
 
+askServerPort() {
+    while true; do
+        read -p "Veuillez mettre le port de la machine cible : " serverPort
+        if [ -n "$serverPort" ]; then
+            break
+        else
+            echo "❌ Veuillez mettre une valeur valide pour le port cible."
+        fi
+    done
+    echo
 }
-modifyFile(){
+
+modifyFile() {
     declare -A replacements=(
-      ["{vhostPort}"]="$vhostport"
-      ["{serverNameRedirect}"]="$serverNameRedirect"
-      ["{serverIp}"]="$serverIp"
-      ["{serverPort}"]="$serverPort"
+        ["{vhostPort}"]="$vhostport"
+        ["{serverNameRedirect}"]="$serverNameRedirect"
+        ["{serverIp}"]="$serverIp"
+        ["{serverPort}"]="$serverPort"
     )
 
-    for old_string in "${!replacements[@]}"
-    do
-      new_string=${replacements["$old_string"]}
-      sed -i "s/$old_string/$new_string/g" "$serverNameRedirect.conf"
+    for old_string in "${!replacements[@]}"; do
+        new_string=${replacements["$old_string"]}
+        sed -i "s|$old_string|$new_string|g" "$serverNameRedirect.conf"
     done
 }
 
-main(){
+main() {
     askVhostPort
     askServerName
     askServerIp
     askServerPort
     modifyFile
-    echo "execution des commandes a2ensite $serverNameRedirect.conf et service apache2 restart"
-    sleep 2s
-    exec "a2ensite $serverNameRedirect.conf"
-    sleep 2s
-    exec "service apache2 restart"
+
+    echo "➡️ Activation du site et redémarrage d'Apache..."
+    sudo a2ensite "$serverNameRedirect.conf"
+    sudo systemctl reload apache2
 }
 
-
-FILE=template-vhost.conf
+FILE="template-vhost.conf"
 if [ -f "$FILE" ]; then
-    echo "$FILE exists."
+    echo "✅ $FILE trouvé."
     main
-else 
-    echo "$FILE does not exist."
+else
+    echo "❌ $FILE introuvable. Veuillez vérifier qu'il est bien présent dans le dossier courant."
 fi
